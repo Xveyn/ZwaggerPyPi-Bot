@@ -19,14 +19,6 @@ class CardExtractor:
         self.values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                        'skip', 'reverse', 'draw2', 'wild', 'draw4']
 
-
-class CardExtractor:
-    def __init__(self, output_dir: str = 'cards'):
-        self.output_dir = output_dir
-        self.colors = ['green', 'yellow', 'red', 'blue']
-        self.values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                       'skip', 'reverse', 'draw2', 'wild', 'draw4']
-
     def extract_cards(self, image_path: str):
         # Bild laden
         img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
@@ -257,7 +249,7 @@ class NeuralNet:
         print(f"Model saved to {filename}")
 
     @staticmethod
-    def save_progress(epsilon, episode, filename='progress.json'):
+    def save_progress(epsilon, episode, filename='trainingProgress.json'):
         progress = {'epsilon': epsilon, 'episode': episode}
         with open(filename, 'w') as f:
             json.dump(progress, f)
@@ -533,10 +525,10 @@ if __name__ == "__main__":
     game = UnoGame(num_players=2)
 
     # Extract cards before starting the game
-    game.extract_cards_from_image('uno_set.png')
+    #game.extract_cards_from_image('uno_set.png')
 
     # Uncomment to train the AI
-    # game.train(num_episodes=50, batch_size=32, save_every=10)
+    game.train(num_episodes=30, batch_size=32, save_every=10)
 
     # Start the game
     # game.play_uno_cmd()
