@@ -167,7 +167,8 @@ class Deck:
 
 
 class NeuralNet:
-    def __init__(self, input_size, memory_size=2000, gamma=0.95, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, learning_rate=0.001):
+    def __init__(self, input_size, memory_size=2000, gamma=0.95, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995,
+                 learning_rate=0.001):
         self.memory = deque(maxlen=memory_size)
         self.gamma = gamma
         self.epsilon = epsilon
@@ -349,8 +350,14 @@ class UnoGame:
                 self.direction *= -1
                 print(f"Game direction changed to {'clockwise' if self.direction == 1 else 'counterclockwise'}.")
 
+                if self.num_players == 2:
+                    # Bei nur zwei Spielern bedeutet ein Richtungswechsel ein "Aussetzen"
+                    self.current_player = (self.current_player + self.direction) % self.num_players
+                    print(
+                        f"Since there are only two players, this acts as a 'Skip'. Next player is {self.current_player}.")
+
             elif card.value == "Aussetzen":
-                # Hier muss die Implementation im `step`-Schritt für Aussetzen berücksichtigt werden
+                # Die Logik zur Behandlung von Spielzügen im `step`-Abschnitt ist berücksichtigt
                 print(f"Player {player_idx} played 'Aussetzen'. Skipping the next player.")
                 self.current_player = (self.current_player + self.direction) % self.num_players
 
@@ -438,8 +445,9 @@ class UnoGame:
         reward = self.calculate_reward(action, old_hand_size)
         done = self.check_winner() is not None
 
-        # Player switch to the next one
-        self.current_player = (self.current_player + self.direction) % self.num_players
+        # Wenn es kein Aussetzen oder Richtungswechsel mit nur zwei Spielern war, zum nächsten Spieler wechseln
+        if not (action and action.value in ["Aussetzen", "Richtungswechsel"] and self.num_players == 2):
+            self.current_player = (self.current_player + self.direction) % self.num_players
 
         return old_state, action, reward, self.encode_state(), done
 
@@ -561,16 +569,16 @@ if __name__ == "__main__":
     game = UnoGame(num_players=2)
 
     # Laden der gespeicherten Erfahrungen, falls vorhanden
-    #game.nn.load_experience('experience_memory.pkl')
+    game.nn.load_experience('experience_memory.pkl')
 
     # Extract cards before starting the game
     #game.extract_cards_from_image('uno_set.png')
 
     # Uncomment to train the AI
-    game.train(num_episodes=10, batch_size=32, save_every=10)
+    #game.train(num_episodes=10, batch_size=32, save_every=10)
 
     # Start the game
-    #game.play_uno_cmd()
+    game.play_uno_cmd()
 
     # Nach dem Spiel die Erfahrungen speichern
-    #game.nn.save_experience('experience_memory.pkl')
+    game.nn.save_experience('experience_memory.pkl')

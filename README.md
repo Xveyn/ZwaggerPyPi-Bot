@@ -10,3 +10,6 @@ Make sure to install the required libraries:
 - opencv-python
 - deque
 - tensorflow
+
+You also need to modify/create the .env file as following without the ' ' :
+- DISCORD_TOKEN='MyDiscordBotToken'
