@@ -3,3 +3,10 @@ This a small bot which implements several functions such as audioplayback as wel
 
 ## Installation
 Make sure to install the required libraries:
+- os
+- random
+- json
+- numpy
+- opencv-python
+- deque
+- tensorflow
