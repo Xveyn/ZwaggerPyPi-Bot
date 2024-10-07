@@ -1,4 +1,5 @@
 import os
+import pickle
 import random
 import json
 import numpy as np
@@ -166,13 +167,13 @@ class Deck:
 
 
 class NeuralNet:
-    def __init__(self, input_size):
-        self.memory = deque(maxlen=2000)
-        self.gamma = 0.95
-        self.epsilon = 1.0
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
-        self.learning_rate = 0.001
+    def __init__(self, input_size, memory_size=2000, gamma=0.95, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, learning_rate=0.001):
+        self.memory = deque(maxlen=memory_size)
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.learning_rate = learning_rate
         self.input_size = input_size
         self.model = self.build_model()
 
@@ -188,9 +189,11 @@ class NeuralNet:
         return model
 
     def memorize(self, state, action, reward, next_state, done):
+        """ Speichert Erfahrungen im Replay-Speicher. """
         self.memory.append((state, action, reward, next_state, done))
 
     def act(self, state, valid_actions):
+        """ Führt eine Aktion basierend auf dem gegebenen Zustand aus, wobei Exploration gegen Exploitation abgewogen wird. """
         if not valid_actions:
             return None
 
@@ -206,10 +209,12 @@ class NeuralNet:
         return valid_actions[np.argmax(act_values)]
 
     def get_state_action_pair(self, state, action):
+        """ Kombiniert den Zustandsvektor mit einem kodierten Aktionsvektor. """
         action_vector = self.encode_action(action)
         return np.concatenate([state, action_vector], axis=1)
 
     def encode_action(self, action):
+        """ Kodiert die Aktion als einen Vektor. """
         action_vector = np.zeros((1, 52))
         if action is not None:
             action_vector[0, self.get_card_index(action)] = 1
@@ -217,14 +222,15 @@ class NeuralNet:
 
     @staticmethod
     def get_card_index(card):
+        """ Gibt den Index einer Karte in einem Vektor zurück. """
         colors = ["Rot", "Gelb", "Grün", "Blau"]
-        values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                  "Aussetzen", "Richtungswechsel", "+2"]
+        values = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Aussetzen", "Richtungswechsel", "+2"]
         if card.value in ["Wild", "+4"]:
             return 48 + ["Wild", "+4"].index(card.value)
         return colors.index(card.color) * 12 + values.index(card.value)
 
     def replay(self, batch_size):
+        """ Trainiert das Model durch erneuten Einsatz von Erfahrungen im Speicher. """
         if len(self.memory) < batch_size:
             return
 
@@ -239,17 +245,34 @@ class NeuralNet:
             target_f[0][0] = target
             self.model.fit(self.get_state_action_pair(state, action), target_f, epochs=1, verbose=0)
 
-            print(f"Step {index + 1}: State: {state}, Action: {action}, Reward: {reward}, Target: {target}")
+            print(f"Replay Step {index + 1}: State: {state}, Action: {action}, Reward: {reward}, Target: {target}")
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-    def save_model(self, filename='uno_model.h5'):
+    def save_model(self, filename='uno_model.keras'):
+        """ Speichert das aktuelle Modell in einer Datei. """
         self.model.save(filename)
         print(f"Model saved to {filename}")
 
+    def save_experience(self, filename='experience_memory.pkl'):
+        """ Speichert den Replay-Memory in einer Datei. """
+        with open(filename, 'wb') as f:
+            pickle.dump(self.memory, f)
+        print(f"Experience memory saved to {filename}")
+
+    def load_experience(self, filename='experience_memory.pkl'):
+        """ Lädt den Replay-Memory von einer Datei. """
+        try:
+            with open(filename, 'rb') as f:
+                self.memory = pickle.load(f)
+            print(f"Experience memory loaded from {filename}")
+        except FileNotFoundError:
+            print(f"No experience memory file found at {filename}, starting fresh.")
+
     @staticmethod
     def save_progress(epsilon, episode, filename='trainingProgress.json'):
+        """ Speichert den Fortschritt des Trainings als JSON. """
         progress = {'epsilon': epsilon, 'episode': episode}
         with open(filename, 'w') as f:
             json.dump(progress, f)
@@ -314,6 +337,13 @@ class UnoGame:
                 else:  # KI oder Training
                     card.color = random.choice(["Rot", "Gelb", "Grün", "Blau"])
                 print(f"Player {player_idx} played a wildcard. New color: {card.color}")
+
+            # Effekt für "+2"-Karten hinzufügen
+            if card.value == "+2":
+                next_player = (player_idx + self.direction) % self.num_players
+                drawn_cards = self.draw_cards(next_player, 2)
+                print(f"Player {next_player} draws 2 cards: {drawn_cards}")
+
             self.discard_pile.append(card)
             return True
         return False
@@ -528,7 +558,7 @@ if __name__ == "__main__":
     #game.extract_cards_from_image('uno_set.png')
 
     # Uncomment to train the AI
-    game.train(num_episodes=30, batch_size=32, save_every=10)
+    game.train(num_episodes=10, batch_size=32, save_every=10)
 
     # Start the game
-    # game.play_uno_cmd()
+    #game.play_uno_cmd()
