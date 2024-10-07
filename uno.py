@@ -338,13 +338,22 @@ class UnoGame:
                     card.color = random.choice(["Rot", "Gelb", "Grün", "Blau"])
                 print(f"Player {player_idx} played a wildcard. New color: {card.color}")
 
-            # Effekt für "+2"-Karten hinzufügen
+            self.discard_pile.append(card)  # Karte auf den Ablagestapel legen
+
             if card.value == "+2":
                 next_player = (player_idx + self.direction) % self.num_players
                 drawn_cards = self.draw_cards(next_player, 2)
                 print(f"Player {next_player} draws 2 cards: {drawn_cards}")
 
-            self.discard_pile.append(card)
+            elif card.value == "Richtungswechsel":
+                self.direction *= -1
+                print(f"Game direction changed to {'clockwise' if self.direction == 1 else 'counterclockwise'}.")
+
+            elif card.value == "Aussetzen":
+                # Hier muss die Implementation im `step`-Schritt für Aussetzen berücksichtigt werden
+                print(f"Player {player_idx} played 'Aussetzen'. Skipping the next player.")
+                self.current_player = (self.current_player + self.direction) % self.num_players
+
             return True
         return False
 
@@ -426,13 +435,10 @@ class UnoGame:
             if not success:
                 print(f"Failed to play card: {action} for Player {self.current_player}")
 
-            if action and action.value == "Aussetzen":
-                print(f"Player {self.current_player} played 'Aussetzen'. Skipping the next player.")
-                self.current_player = (self.current_player + self.direction) % self.num_players
-
         reward = self.calculate_reward(action, old_hand_size)
         done = self.check_winner() is not None
 
+        # Player switch to the next one
         self.current_player = (self.current_player + self.direction) % self.num_players
 
         return old_state, action, reward, self.encode_state(), done
@@ -554,6 +560,9 @@ class UnoGame:
 if __name__ == "__main__":
     game = UnoGame(num_players=2)
 
+    # Laden der gespeicherten Erfahrungen, falls vorhanden
+    #game.nn.load_experience('experience_memory.pkl')
+
     # Extract cards before starting the game
     #game.extract_cards_from_image('uno_set.png')
 
@@ -562,3 +571,6 @@ if __name__ == "__main__":
 
     # Start the game
     #game.play_uno_cmd()
+
+    # Nach dem Spiel die Erfahrungen speichern
+    #game.nn.save_experience('experience_memory.pkl')
